@@ -27,18 +27,22 @@ contributors: Shu-yu Guo, David Teller, Ecma International
   <p>Unlike the Shift AST spec, interface types are not used to inherit fields to control over ordering of fields. Type hierarchies that are not used to discriminate are collapsed to make space costs simple. Nor are they used to discriminate types, for which explicitly discriminated unions types are used.</p>
   <emu-note>Whereas Shift AST's design principle is ease of search-and-replace of node types, binary AST's design principle is ease of verification and ease of associating different behaviors with syntactically different (but possibly lexically similar) productions.</emu-note>
   <p>The grammar is presented in WebIDL with the `[TypeIndicator]` and `[NonEmpty]` extensions per Shift AST spec. The `[Lazy]` extension serves as a hint to the surface encoding that the `[Lazy]` attribute should be skippable in the byte stream in constant time. The `typedefs` of `or` types are to be read as recursive sum types. In text below, the "is a `Foo`" prose is shorthand for checking the node's `type` attribute being equal to `"Foo"`.</p>
+  <p>The `[Token(...)]` extension is used to restrict the `DOMString` type to a set of acceptable strings.</p>
 
   <pre><code class="language-webidl">
 // Type aliases and enums.
 
 typedef FrozenArray&lt;(SpreadElement or Expression)> Arguments;
-typedef DOMString string;
 
-//  Identifier:: IdentifierName but not ReservedWord
-typedef string Identifier;
-typedef string IdentifierName;
-
-typedef string Label;
+// Restricted strings and string enums.
+typedef [Token(Identifier)] DOMString Identifier;
+typedef [Token(IdentifierName)] DOMString IdentifierName;
+typedef [Token(Label)] DOMString Label;
+typedef [Token(IdentifierLikePropertyNameLiteral)] DOMString IdentifierLikePropertyNameLiteral;
+typedef [Token(PropertyNameLiteral)] DOMString PropertyNameLiteral;
+typedef [Token(ModuleSpecifierLiteral)] DOMString ModuleSpecifierLiteral;
+typedef [Token(RegExpFlags)] DOMString RegExpFlags;
+typedef [Token(StringLiteral)] DOMString StringLiteral;
 
 enum VariableDeclarationKind {
   "var",
@@ -326,7 +330,7 @@ interface StaticMemberAssignmentTarget : Node {
   // The object whose property is being assigned.
   attribute (Expression or Super) _object;
   // The name of the property to be accessed.
-  attribute IdentifierName property;
+  attribute IdentifierLikePropertyNameLiteral property;
 };
 
 // `ArrayBindingPattern`
@@ -423,7 +427,7 @@ interface Module : Node {
 
 // An `ImportDeclaration` not including a namespace import.
 interface Import : Node {
-  attribute string moduleSpecifier;
+  attribute ModuleSpecifierLiteral moduleSpecifier;
   // `ImportedDefaultBinding`, if present.
   attribute BindingIdentifier? defaultBinding;
   attribute FrozenArray&lt;ImportSpecifier&gt; namedImports;
@@ -431,7 +435,7 @@ interface Import : Node {
 
 // An `ImportDeclaration` including a namespace import.
 interface ImportNamespace : Node {
-  attribute string moduleSpecifier;
+  attribute ModuleSpecifierLiteral moduleSpecifier;
   // `ImportedDefaultBinding`, if present.
   attribute BindingIdentifier? defaultBinding;
   attribute BindingIdentifier namespaceBinding;
@@ -440,19 +444,19 @@ interface ImportNamespace : Node {
 interface ImportSpecifier : Node {
   // The `IdentifierName` in the production `ImportSpecifier :: IdentifierName as ImportedBinding`;
   // absent if this specifier represents the production `ImportSpecifier :: ImportedBinding`.
-  attribute IdentifierName? name;
+  attribute IdentifierLikePropertyNameLiteral? name;
   attribute BindingIdentifier binding;
 };
 
 // `export * FromClause;`
 interface ExportAllFrom : Node {
-  attribute string moduleSpecifier;
+  attribute ModuleSpecifierLiteral moduleSpecifier;
 };
 
 // `export ExportClause FromClause;`
 interface ExportFrom : Node {
   attribute FrozenArray&lt;ExportFromSpecifier&gt; namedExports;
-  attribute string moduleSpecifier;
+  attribute ModuleSpecifierLiteral moduleSpecifier;
 };
 
 // `export ExportClause;`
@@ -476,10 +480,10 @@ interface ExportDefault : Node {
 interface ExportFromSpecifier : Node {
   // The only `IdentifierName in `ExportSpecifier :: IdentifierName`,
   // or the first in `ExportSpecifier :: IdentifierName as IdentifierName`.
-  attribute IdentifierName name;
+  attribute IdentifierLikePropertyNameLiteral name;
   // The second `IdentifierName` in `ExportSpecifier :: IdentifierName as IdentifierName`,
   // if that is the production represented.
-  attribute IdentifierName? exportedName;
+  attribute IdentifierLikePropertyNameLiteral? exportedName;
 };
 
 // `ExportSpecifier`, as part of an `ExportLocals`.
@@ -488,7 +492,7 @@ interface ExportLocalSpecifier : Node {
   // or the first in `ExportSpecifier :: IdentifierName as IdentifierName`.
   attribute IdentifierExpression name;
   // The second `IdentifierName` in `ExportSpecifier :: IdentifierName as IdentifierName`, if present.
-  attribute IdentifierName? exportedName;
+  attribute IdentifierLikePropertyNameLiteral? exportedName;
 };
 
 
@@ -573,7 +577,7 @@ interface ComputedPropertyName : Node {
 
 // `LiteralPropertyName`
 interface LiteralPropertyName : Node {
-  attribute string value;
+  attribute PropertyNameLiteral value;
 };
 
 
@@ -597,13 +601,13 @@ interface LiteralNumericExpression : Node {
 
 // `RegularExpressionLiteral`
 interface LiteralRegExpExpression : Node {
-  attribute string pattern;
-  attribute string flags;
+  attribute StringLiteral pattern;
+  attribute RegExpFlags flags;
 };
 
 // `StringLiteral`
 interface LiteralStringExpression : Node {
-  attribute string value;
+  attribute StringLiteral value;
 };
 
 
@@ -770,7 +774,7 @@ interface StaticMemberExpression : Node {
   // The object whose property is being accessed.
   attribute (Expression or Super) _object;
   // The name of the property to be accessed.
-  attribute IdentifierName property;
+  attribute IdentifierLikePropertyNameLiteral property;
 };
 
 // `TemplateLiteral`,
@@ -966,7 +970,7 @@ interface CatchClause : Node {
 
 // An item in a `DirectivePrologue`
 interface Directive : Node {
-  attribute string rawValue;
+  attribute StringLiteral rawValue;
 };
 
 interface FormalParameters : Node {
@@ -1034,7 +1038,7 @@ interface SwitchDefault : Node {
 
 // `TemplateCharacters`
 interface TemplateElement : Node {
-  attribute string rawValue;
+  attribute StringLiteral rawValue;
 };
 
 interface VariableDeclaration : Node {
@@ -1625,7 +1629,7 @@ interface VariableDeclarator : Node {
   <emu-clause id="sec-identifierecmaify" aoid="IdentifierEcmaify">
     <h1>IdentifierEcmaify ( _ident_ )</h1>
     <emu-alg>
-      1. Assert: _ident_ is an `Identifier` or an `IdentifierName`.
+      1. Assert: _ident_ is an `Identifier` or an `IdentifierName` or an `IdentifierLikePropertyNameLiteral`.
       1. NOTE: The full tree of identifiers is elided here and left as an exercise to the reader.
       1. If _ident_ is the empty string, throw a *SyntaxError* exception.
       1. Return |Identifier| : _ident_.
